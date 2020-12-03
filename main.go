@@ -70,13 +70,13 @@ func main() {
 	// parse config file
 	raw_file, err := ioutil.ReadFile(config.ConfigPath)
 	if err != nil {
-		fmt.Printf("ioutil.ReadFile: %s\n", err)
+		fmt.Printf("main: %s\n", err)
 		os.Exit(1)
 	}
 	reminder_list := make([]Reminder, 20)
 	err = json.Unmarshal(raw_file, &reminder_list)
 	if err != nil {
-		fmt.Printf("json.Unmarshal: %s\n", err)
+		fmt.Printf("main: %s\n", err)
 		os.Exit(1)
 	}
 

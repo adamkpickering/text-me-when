@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"os"
+	"errors"
 )
 
 type Config struct {
@@ -16,14 +17,35 @@ type Config struct {
 type Reminder struct {
 	FirstName string
 	LastName string
-	Birthday string
-	//Birthday time.Time
+	Birthday time.Time
 }
 
-//type (r *Reminder) UnmarshalJson(data []byte) error {
-//	if string(data) == "null" { return nil }
-//	for 
-//}
+func (r *Reminder) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" { return nil }
+	obj := map[string]string{}
+	err := json.Unmarshal(data, &obj)
+	if err != nil {
+		return fmt.Errorf("Reminder.UnmarshalJSON: %w", err)
+	}
+	for key, value := range obj {
+		switch key {
+		case "first_name":
+			r.FirstName = value
+		case "last_name":
+			r.LastName = value
+		case "birthday":
+			birthday, err := time.Parse("2006-01-02", value)
+			if err != nil {
+				return fmt.Errorf("Reminder.UnmarshalJSON: %w", err)
+			}
+			r.Birthday = birthday
+		default:
+			msg := fmt.Sprintf("Reminder.UnmarshalJSON: key %s is invalid", key)
+			return errors.New(msg)
+		}
+	}
+	return nil
+}
 
 func get_config() Config {
 	c := Config{}

@@ -6,11 +6,11 @@ import (
 
 func TestNewCronTrigger(t *testing.T) {
 	// test what should be successful creation
-	regular_test_arguments := []string{"2", "*/2", "2,3", "2,3,4,5,6", "24,59"}
+	regular_test_arguments := []string{"2", "*/2", "2,3", "2,3,4,5,6", "1,18,23"}
 	for _, argument := range regular_test_arguments {
 		_, err := NewCronTrigger("1", argument, "3", "4", "5")
 		if err != nil {
-			t.Errorf("regular creation with arg %s failed", argument)
+			t.Errorf("arg %s: %s", argument, err)
 		}
 	}
 	//
@@ -41,7 +41,7 @@ func TestNewCronTrigger(t *testing.T) {
 		[]string{"1", "2", "3", "4", "1.1"},
 
 		// badly formatted cron strings
-		[]string{"1", "2", "3", "4", "5"},
+		[]string{"*/ 3", "2", "3", "4", "5"},
 	}
 	for _, arg_list := range test_arguments {
 		_, err := NewCronTrigger(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4])

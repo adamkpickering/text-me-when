@@ -93,7 +93,7 @@ func main() {
 
 	// construct sns client
 	home_dir, ok := os.LookupEnv("HOME")
-	if !ok {
+	if ! ok {
 		fmt.Fprintf(os.Stderr, "main: HOME env variable is not present")
 		os.Exit(1)
 	}

@@ -1,7 +1,6 @@
 package reminder
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -57,15 +56,10 @@ func TestNewCronTriggerAbnormal(t *testing.T) {
 }
 
 type TPCFArguments struct {
-	fieldName  string
-	fieldValue string
-	lowerBound uint
-	upperBound uint
-}
-
-func (a TPCFArguments) String() string {
-	return fmt.Sprintf(`TPCFArguments{fieldName: "%s", fieldValue: "%s", lowerBound: %d, upperBound: %d`,
-		a.fieldName, a.fieldValue, a.lowerBound, a.upperBound)
+	FieldName  string
+	FieldValue string
+	LowerBound uint
+	UpperBound uint
 }
 
 type TPCFTestCase struct {
@@ -73,62 +67,86 @@ type TPCFTestCase struct {
 	ExpectedReturn []uint
 }
 
-// Tests cases that should succeed for comma-separated format.
-func TestParseCronFieldCommaSeparatedNormal(t *testing.T) {
+// Tests cases that should succeed, including return values.
+func TestParseCronFieldNormal(t *testing.T) {
 	test_cases := []TPCFTestCase{
+		// comma-separated case
 		TPCFTestCase{
-			Args:           TPCFArguments{fieldName: "x", fieldValue: "1,2", lowerBound: 0, upperBound: 3},
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "1,2", LowerBound: 0, UpperBound: 3},
 			ExpectedReturn: []uint{1, 2},
 		},
 		TPCFTestCase{
-			Args:           TPCFArguments{fieldName: "x", fieldValue: "1,2,3,4", lowerBound: 0, upperBound: 4},
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "1,2,3,4", LowerBound: 0, UpperBound: 4},
 			ExpectedReturn: []uint{1, 2, 3, 4},
 		},
 		TPCFTestCase{
-			Args:           TPCFArguments{fieldName: "x", fieldValue: "3,4,1,2", lowerBound: 0, upperBound: 4},
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "3,4,1,2", LowerBound: 0, UpperBound: 4},
 			ExpectedReturn: []uint{3, 4, 1, 2},
 		},
 		TPCFTestCase{
-			Args:           TPCFArguments{fieldName: "x", fieldValue: "1,10,7", lowerBound: 0, upperBound: 10},
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "1,10,7", LowerBound: 0, UpperBound: 10},
 			ExpectedReturn: []uint{1, 10, 7},
+		},
+
+		// slash-separated case
+		TPCFTestCase{
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "*/2", LowerBound: 0, UpperBound: 2},
+			ExpectedReturn: []uint{0, 2},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "*/4", LowerBound: 0, UpperBound: 10},
+			ExpectedReturn: []uint{0, 4, 8},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "*/4", LowerBound: 1, UpperBound: 10},
+			ExpectedReturn: []uint{1, 5, 9},
+		},
+
+		// asterisk case
+		TPCFTestCase{
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "*", LowerBound: 1, UpperBound: 2},
+			ExpectedReturn: []uint{1, 2},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "*", LowerBound: 1, UpperBound: 4},
+			ExpectedReturn: []uint{1, 2, 3, 4},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{FieldName: "x", FieldValue: "*", LowerBound: 12, UpperBound: 14},
+			ExpectedReturn: []uint{12, 13, 14},
 		},
 	}
 	for _, tc := range test_cases {
-		rv, err := parseCronField(tc.Args.fieldName, tc.Args.fieldValue, tc.Args.lowerBound, tc.Args.upperBound)
+		rv, err := parseCronField(tc.Args.FieldName, tc.Args.FieldValue, tc.Args.LowerBound, tc.Args.UpperBound)
 		if err != nil {
 			t.Errorf("got unexpected error: %s", err)
 		}
 		for i, value := range rv {
 			if value != tc.ExpectedReturn[i] {
-				t.Errorf("got return value %v with args %s (%v expected)", rv, tc.Args, tc.ExpectedReturn)
+				t.Errorf("got return value %v with args %v (%v expected)", rv, tc.Args, tc.ExpectedReturn)
 			}
 		}
 	}
 }
 
-// Tests cases that should fail for comma-separated format.
-func TestParseCronFieldCommaSeparatedAbnormal(t *testing.T) {
+// Tests cases that should fail.
+func TestParseCronFieldAbnormal(t *testing.T) {
 	test_arguments := []TPCFArguments{
-		TPCFArguments{fieldName: "x", fieldValue: "0,2", lowerBound: 1, upperBound: 3},
-		TPCFArguments{fieldName: "x", fieldValue: "0,2", lowerBound: 0, upperBound: 1},
-		TPCFArguments{fieldName: "x", fieldValue: "0,2", lowerBound: 2, upperBound: 0},
+		// comma-separated case
+		TPCFArguments{FieldName: "x", FieldValue: "0,2", LowerBound: 1, UpperBound: 3},
+		TPCFArguments{FieldName: "x", FieldValue: "0,2", LowerBound: 0, UpperBound: 1},
+		TPCFArguments{FieldName: "x", FieldValue: "0,2", LowerBound: 2, UpperBound: 0},
+
+		// slash-separated case
+		TPCFArguments{FieldName: "x", FieldValue: "*/2", LowerBound: 2, UpperBound: 0},
+
+		// asterisk case
+		TPCFArguments{FieldName: "x", FieldValue: "*", LowerBound: 2, UpperBound: 0},
 	}
 	for _, args := range test_arguments {
-		_, err := parseCronField(args.fieldName, args.fieldValue, args.lowerBound, args.upperBound)
+		_, err := parseCronField(args.FieldName, args.FieldValue, args.LowerBound, args.UpperBound)
 		if err == nil {
-			t.Errorf("no error where there should have been with args %s", args)
+			t.Errorf("no error where there should have been with args %v", args)
 		}
 	}
-}
-
-// Tests cases that should succeed for slash-separated format.
-func TestParseCronFieldSlashSeparatedNormal(t *testing.T) {
-}
-
-// Tests cases that should fail for slash-separated format.
-func TestParseCronFieldSlashSeparatedAbnormal(t *testing.T) {
-}
-
-// Tests cases that should succeed for asterisk ("*") format.
-func TestParseCronFieldAsterisk(t *testing.T) {
 }

@@ -2,12 +2,12 @@
 package reminder
 
 import (
-	"time"
-	"strings"
-	"regexp"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type Trigger interface {
@@ -16,18 +16,18 @@ type Trigger interface {
 }
 
 type ReminderV1 struct {
-	Version string
-	Message string
+	Version  string
+	Message  string
 	Triggers []Trigger
 }
 
 type CronTrigger struct {
 	triggerType string
-	Minute string
-	Hour string
-	DayOfMonth string
-	Month string
-	DayOfWeek string
+	Minute      string
+	Hour        string
+	DayOfMonth  string
+	Month       string
+	DayOfWeek   string
 }
 
 func (ct CronTrigger) Type() string {
@@ -53,7 +53,7 @@ func (ct CronTrigger) ShouldRun(current_time time.Time) bool {
 }
 
 type fieldData struct {
-	Value string
+	Value      string
 	LowerBound uint
 	UpperBound uint
 }
@@ -61,11 +61,11 @@ type fieldData struct {
 // Creates a new CronTrigger object from arguments that correspond to cron fields.
 func NewCronTrigger(minute, hour, day_of_month, month, day_of_week string) (CronTrigger, error) {
 	fields_to_check := map[string]fieldData{
-		"minute": fieldData{Value: minute, LowerBound: 0, UpperBound: 59},
-		"hour": fieldData{Value: hour, LowerBound: 0, UpperBound: 23},
+		"minute":       fieldData{Value: minute, LowerBound: 0, UpperBound: 59},
+		"hour":         fieldData{Value: hour, LowerBound: 0, UpperBound: 23},
 		"day_of_month": fieldData{Value: day_of_month, LowerBound: 1, UpperBound: 31},
-		"month": fieldData{Value: month, LowerBound: 1, UpperBound: 12},
-		"day_of_week": fieldData{Value: day_of_week, LowerBound: 0, UpperBound: 6},
+		"month":        fieldData{Value: month, LowerBound: 1, UpperBound: 12},
+		"day_of_week":  fieldData{Value: day_of_week, LowerBound: 0, UpperBound: 6},
 	}
 	for field_name, field_data := range fields_to_check {
 		_, err := parseCronField(field_name, field_data.Value, field_data.LowerBound, field_data.UpperBound)
@@ -75,18 +75,27 @@ func NewCronTrigger(minute, hour, day_of_month, month, day_of_week string) (Cron
 	}
 	return_ct := CronTrigger{
 		triggerType: "cron",
-		Minute: minute,
-		Hour: hour,
-		DayOfMonth: day_of_month,
-		Month: month,
-		DayOfWeek: day_of_week,
+		Minute:      minute,
+		Hour:        hour,
+		DayOfMonth:  day_of_month,
+		Month:       month,
+		DayOfWeek:   day_of_week,
 	}
 	return return_ct, nil
 }
 
 // Parses a single cron field (can be any field) and returns a slice that contains
-// all values that the cron-formatted field stood in for.
+// all values that the cron-formatted field stood in for. For example, a value of
+// "1,3,7" is turned into []uint{1, 3, 7}, and a value of "*/2" is turned into
+// []uint{0, 2} for lower bound 0 and upper bound 2.
 func parseCronField(field_name, field_value string, lower_bound uint, upper_bound uint) ([]uint, error) {
+	// check args
+	if lower_bound >= upper_bound {
+		err := fmt.Errorf("lower_bound (value %d) must be lower than upper_bound (value %d)",
+			lower_bound, upper_bound)
+		return nil, err
+	}
+
 	// check if we're working with comma format ("4,5,23")
 	matched_comma_format, err := regexp.MatchString(`^[0-9]{1,3}(,[0-9]{1,3})*$`, field_value)
 	if err != nil {
@@ -108,7 +117,7 @@ func parseCronField(field_name, field_value string, lower_bound uint, upper_boun
 		numbers := make([]uint, len(string_numbers))
 		for _, number := range string_numbers {
 			value, err := convertAndCheckBounds(number, lower_bound, upper_bound)
-			if err != nil{
+			if err != nil {
 				msg := fmt.Sprintf("failed to convert field %s value %s: %s", field_name, field_value, err)
 				return nil, errors.New(msg)
 			}
@@ -127,14 +136,14 @@ func parseCronField(field_name, field_value string, lower_bound uint, upper_boun
 			msg := fmt.Sprintf("failed to convert field %s value %s: %s", field_name, field_value, err)
 			return nil, errors.New(msg)
 		}
-		numbers := make([]uint, upper_bound - lower_bound + 1)
+		numbers := make([]uint, upper_bound-lower_bound+1)
 		for i := lower_bound; i <= upper_bound; i = i + value {
 			numbers = append(numbers, i)
 		}
 		return numbers, nil
 
 	case field_value == "*":
-		numbers := make([]uint, upper_bound - lower_bound + 1)
+		numbers := make([]uint, upper_bound-lower_bound+1)
 		for i := lower_bound; i <= upper_bound; i = i + 1 {
 			numbers = append(numbers, i)
 		}

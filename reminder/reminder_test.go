@@ -68,15 +68,43 @@ func (a TPCFArguments) String() string {
 		a.fieldName, a.fieldValue, a.lowerBound, a.upperBound)
 }
 
+type TPCFTestCase struct {
+	Args           TPCFArguments
+	ExpectedReturn []uint
+}
+
 // Tests cases that should succeed for comma-separated format.
-//func TestParseCronFieldCommaSeparatedNormal(t * testing.T) {
-//	test_arguments := []TPCFArguments{
-//		TPCFArguments{fieldName: "x", fieldValue: "1,2", lowerBound: 0, upperBound: 3},
-//	}
-//	for _, args := range test_arguments {
-//
-//	}
-//}
+func TestParseCronFieldCommaSeparatedNormal(t *testing.T) {
+	test_cases := []TPCFTestCase{
+		TPCFTestCase{
+			Args:           TPCFArguments{fieldName: "x", fieldValue: "1,2", lowerBound: 0, upperBound: 3},
+			ExpectedReturn: []uint{1, 2},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{fieldName: "x", fieldValue: "1,2,3,4", lowerBound: 0, upperBound: 4},
+			ExpectedReturn: []uint{1, 2, 3, 4},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{fieldName: "x", fieldValue: "3,4,1,2", lowerBound: 0, upperBound: 4},
+			ExpectedReturn: []uint{3, 4, 1, 2},
+		},
+		TPCFTestCase{
+			Args:           TPCFArguments{fieldName: "x", fieldValue: "1,10,7", lowerBound: 0, upperBound: 10},
+			ExpectedReturn: []uint{1, 10, 7},
+		},
+	}
+	for _, tc := range test_cases {
+		rv, err := parseCronField(tc.Args.fieldName, tc.Args.fieldValue, tc.Args.lowerBound, tc.Args.upperBound)
+		if err != nil {
+			t.Errorf("got unexpected error: %s", err)
+		}
+		for i, value := range rv {
+			if value != tc.ExpectedReturn[i] {
+				t.Errorf("got return value %v with args %s (%v expected)", rv, tc.Args, tc.ExpectedReturn)
+			}
+		}
+	}
+}
 
 // Tests cases that should fail for comma-separated format.
 func TestParseCronFieldCommaSeparatedAbnormal(t *testing.T) {

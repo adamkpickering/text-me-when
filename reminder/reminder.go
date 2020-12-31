@@ -114,7 +114,7 @@ func parseCronField(field_name, field_value string, lower_bound uint, upper_boun
 	switch {
 	case matched_comma_format:
 		string_numbers := strings.Split(field_value, ",")
-		numbers := make([]uint, len(string_numbers))
+		numbers := make([]uint, 0, len(string_numbers))
 		for _, number := range string_numbers {
 			value, err := convertAndCheckBounds(number, lower_bound, upper_bound)
 			if err != nil {
@@ -136,14 +136,14 @@ func parseCronField(field_name, field_value string, lower_bound uint, upper_boun
 			msg := fmt.Sprintf("failed to convert field %s value %s: %s", field_name, field_value, err)
 			return nil, errors.New(msg)
 		}
-		numbers := make([]uint, upper_bound-lower_bound+1)
+		numbers := make([]uint, 0, upper_bound-lower_bound+1)
 		for i := lower_bound; i <= upper_bound; i = i + value {
 			numbers = append(numbers, i)
 		}
 		return numbers, nil
 
 	case field_value == "*":
-		numbers := make([]uint, upper_bound-lower_bound+1)
+		numbers := make([]uint, 0, upper_bound-lower_bound+1)
 		for i := lower_bound; i <= upper_bound; i = i + 1 {
 			numbers = append(numbers, i)
 		}

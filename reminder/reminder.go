@@ -34,22 +34,32 @@ func (ct CronTrigger) Type() string {
 	return ct.triggerType
 }
 
+// Given a time as a time.Time object, tells the caller whether the CronTrigger
+// should run at this time.
 func (ct CronTrigger) ShouldRun(current_time time.Time) bool {
-	// match minute
-	switch {
-	case strings.Contains(ct.Minute, "/"):
-		return false
-	case strings.Contains(ct.Minute, ","):
-		return false
-	case ct.Minute == "*":
+	minute := matchCronFields(uint(current_time.Minute()), ct.Minute, 0, 59)
+	hour := matchCronFields(uint(current_time.Hour()), ct.Hour, 0, 23)
+	day_of_month := matchCronFields(uint(current_time.Day()), ct.DayOfMonth, 1, 31)
+	month := matchCronFields(uint(current_time.Month()), ct.Month, 1, 12)
+	day_of_week := matchCronFields(uint(current_time.Weekday()), ct.DayOfWeek, 0, 6)
+	return minute && hour && month && (day_of_month || day_of_week)
+}
+
+// Checks whether a cron field with a given value matches a field pattern, as stored by
+// the CronTrigger object. lower_bound and upper_bound are the bounds (inclusive) of
+// the field. Errors in parseCronField are ignored since any problems here should be dealt
+// with upon CronTrigger creation.
+func matchCronFields(field_value uint, field_pattern string, lower_bound, upper_bound uint) bool {
+	numbers, err := parseCronField("asdf", field_pattern, lower_bound, upper_bound)
+	if err != nil {
 		return false
 	}
-
-	// match hour
-	// match day of month
-	// match month
-	// match day of week
-	return true
+	for _, number := range numbers {
+		if number == field_value {
+			return true
+		}
+	}
+	return false
 }
 
 type fieldData struct {

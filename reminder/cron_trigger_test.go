@@ -2,6 +2,7 @@ package reminder
 
 import (
 	"testing"
+	"time"
 )
 
 // Tests conditions that should result in successful CronTrigger creation.
@@ -147,5 +148,69 @@ func TestParseCronFieldAbnormal(t *testing.T) {
 		if err == nil {
 			t.Errorf("no error where there should have been with args %v", args)
 		}
+	}
+}
+
+func getCronTrigger(t *testing.T, minute, hour, day_of_month, month, day_of_week string) CronTrigger {
+	t.Helper()
+	ct, err := NewCronTrigger(minute, hour, day_of_month, month, day_of_week)
+	if err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+	return ct
+}
+
+func TestShouldRun(t *testing.T) {
+	// this should always work
+	ct := getCronTrigger(t, "*", "*", "*", "*", "*")
+	current_time := time.Now()
+	if ! ct.ShouldRun(current_time) {
+		t.Error("CronTrigger.ShouldRun returned false when it should be true")
+	}
+
+	// slash separated 1
+	ct = getCronTrigger(t, "*/4", "*", "*", "*", "*")
+	test_time := time.Date(2021, time.January, 1, 0, 0, 22, 1234, time.UTC)
+	if ! ct.ShouldRun(test_time) {
+		t.Error("CronTrigger.ShouldRun returned false when it should be true")
+	}
+
+	// slash separated 2
+	ct = getCronTrigger(t, "*/4", "*", "*", "*", "*")
+	test_time = time.Date(2021, time.January, 1, 0, 8, 22, 1234, time.UTC)
+	if ! ct.ShouldRun(test_time) {
+		t.Error("CronTrigger.ShouldRun returned false when it should be true")
+	}
+
+	// slash separated 3
+	ct = getCronTrigger(t, "*/4", "*", "*", "*", "*")
+	test_time = time.Date(2021, time.January, 1, 0, 6, 22, 1234, time.UTC)
+	t.Log(test_time)
+	if ct.ShouldRun(test_time) {
+		t.Error("CronTrigger.ShouldRun returned true when it should be false")
+	}
+
+	// comma separated 1
+	ct = getCronTrigger(t, "*", "0,12,23", "*", "*", "*")
+	test_time = time.Date(2021, time.January, 1, 0, 0, 22, 1234, time.UTC)
+	t.Log(test_time)
+	if ! ct.ShouldRun(test_time) {
+		t.Error("CronTrigger.ShouldRun returned false when it should be true")
+	}
+
+	// comma separated 2
+	ct = getCronTrigger(t, "*", "0,12,23", "*", "*", "*")
+	test_time = time.Date(2021, time.January, 1, 12, 0, 22, 1234, time.UTC)
+	t.Log(test_time)
+	if ! ct.ShouldRun(test_time) {
+		t.Error("CronTrigger.ShouldRun returned false when it should be true")
+	}
+
+	// comma separated 3
+	ct = getCronTrigger(t, "*", "0,12,23", "*", "*", "*")
+	test_time = time.Date(2021, time.January, 1, 17, 0, 22, 1234, time.UTC)
+	t.Log(test_time)
+	if ct.ShouldRun(test_time) {
+		t.Error("CronTrigger.ShouldRun returned true when it should be false")
 	}
 }

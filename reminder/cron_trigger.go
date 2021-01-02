@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
 )
 
 var bounds = map[string]map[string]uint{
@@ -41,13 +42,13 @@ type CronTrigger struct {
 	DayOfWeek   string
 }
 
-func (ct CronTrigger) Type() string {
+func (ct *CronTrigger) TriggerType() string {
 	return ct.triggerType
 }
 
 // Given a time as a time.Time object, tells the caller whether the CronTrigger
 // should run at this time.
-func (ct CronTrigger) ShouldRun(current_time time.Time) bool {
+func (ct *CronTrigger) ShouldRun(current_time time.Time) bool {
 	minute := matchCronFields(uint(current_time.Minute()), ct.Minute,
 		bounds["minute"]["lower"], bounds["minute"]["upper"])
 	hour := matchCronFields(uint(current_time.Hour()), ct.Hour,
@@ -60,6 +61,62 @@ func (ct CronTrigger) ShouldRun(current_time time.Time) bool {
 		bounds["day_of_week"]["lower"], bounds["day_of_week"]["upper"])
 
 	return minute && hour && month && (day_of_month || day_of_week)
+}
+
+func (ct *CronTrigger) UnmarshalJSON(data []byte) error {
+	obj := map[string]string{}
+	err := json.Unmarshal(data, &obj)
+	if err != nil {
+		return fmt.Errorf("CronTrigger.UnmarshalJSON: %w", err)
+	}
+	if &obj == nil {
+		return fmt.Errorf("CronTrigger.UnmarshalJSON: got null literal")
+	}
+	for key, value := range obj {
+		switch key {
+		case "trigger_type":
+			ct.triggerType = value
+		case "minute":
+			ct.Minute = value
+		case "hour":
+			ct.Hour = value
+		case "day_of_month":
+			ct.DayOfMonth = value
+		case "month":
+			ct.Month = value
+		case "day_of_week":
+			ct.DayOfWeek = value
+		default:
+			return fmt.Errorf("CronTrigger.UnmarshalJSON: key %s is invalid", key)
+		}
+	}
+	return nil
+}
+
+func (ct *CronTrigger) ParseTriggerFromInterfaceMap(obj_map map[string]interface{}) error {
+	for key, i := range obj_map {
+		value, ok := i.(string)
+		if ! ok {
+			return fmt.Errorf("the value of key %s could not be converted to string")
+		}
+		switch key {
+		case "trigger_type":
+			ct.triggerType = value
+		case "minute":
+			ct.Minute = value
+		case "hour":
+			ct.Hour = value
+		case "day_of_month":
+			ct.DayOfMonth = value
+		case "month":
+			ct.Month = value
+		case "day_of_week":
+			ct.DayOfWeek = value
+		default:
+			return fmt.Errorf("the key \"%s\" is not a valid key", key)
+		}
+	}
+	return nil
 }
 
 // Checks whether a cron field with a given value matches a field pattern, as stored by
@@ -80,7 +137,7 @@ func matchCronFields(field_value uint, field_pattern string, lower_bound, upper_
 }
 
 // Creates a new CronTrigger object from arguments that correspond to cron fields.
-func NewCronTrigger(minute, hour, day_of_month, month, day_of_week string) (CronTrigger, error) {
+func NewCronTrigger(minute, hour, day_of_month, month, day_of_week string) (*CronTrigger, error) {
 	fields_to_check := map[string]string{
 		"minute":       minute,
 		"hour":         hour,
@@ -91,10 +148,10 @@ func NewCronTrigger(minute, hour, day_of_month, month, day_of_week string) (Cron
 	for field_name, field_pattern := range fields_to_check {
 		_, err := parseCronField(field_pattern, bounds[field_name]["lower"], bounds[field_name]["upper"])
 		if err != nil {
-			return CronTrigger{}, fmt.Errorf("NewCronTrigger error on field %s: %w", field_name, err)
+			return nil, fmt.Errorf("NewCronTrigger error on field %s: %w", field_name, err)
 		}
 	}
-	return_ct := CronTrigger{
+	return_ct := &CronTrigger{
 		triggerType: "cron",
 		Minute:      minute,
 		Hour:        hour,

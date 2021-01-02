@@ -151,7 +151,7 @@ func TestParseCronFieldAbnormal(t *testing.T) {
 	}
 }
 
-func getCronTrigger(t *testing.T, minute, hour, day_of_month, month, day_of_week string) CronTrigger {
+func getCronTrigger(t *testing.T, minute, hour, day_of_month, month, day_of_week string) *CronTrigger {
 	t.Helper()
 	ct, err := NewCronTrigger(minute, hour, day_of_month, month, day_of_week)
 	if err != nil {

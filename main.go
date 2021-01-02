@@ -50,6 +50,10 @@ func fire_reminders(call_time time.Time, sns_client *sns.SNS, reminder_list []re
 
 func main() {
 	// parse CLI flags
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "%s [OPTIONS]\n\nOptions:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
 	config_path := flag.String("c", "/etc/reminder-boi.json", "The path to the config file")
 	flag.Parse()
 

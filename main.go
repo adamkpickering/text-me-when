@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -33,17 +33,16 @@ func send_message(sns_client *sns.SNS, message string, number string) error {
 	return nil
 }
 
-func fire_reminders(call_time time.Time, sns_client *sns.SNS, reminder_list []reminder.ReminderV1) {
-	message := "this is a test message"
-	phone_number := "+12345678901"
+func fire_reminders(call_time time.Time, phone_number string, sns_client *sns.SNS,
+	reminder_list []reminder.ReminderV1) {
 	for _, reminder := range reminder_list {
 		if reminder.ShouldRun(call_time) {
-			err := send_message(sns_client, message, phone_number)
+			err := send_message(sns_client, reminder.Message, phone_number)
 			if err != nil {
-				log.Printf("send_message failed: %w", err)
+				log.Printf("send_message failed: %s", err)
 				continue
 			}
-			log.Printf("Sent message \"%s\" to %s", message, phone_number)
+			log.Printf("sent message \"%s\" to %s", reminder.Message, phone_number)
 		}
 	}
 }
@@ -54,43 +53,83 @@ func main() {
 
 	// parse CLI flags
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "%s [OPTIONS]\n\nOptions:\n", os.Args[0])
+		usage_header :=
+			"%s [OPTIONS] PHONE_NUMBER\n" +
+				"\n" +
+				"  Checks every minute for reminders from the reminders config file that should run.\n" +
+				"  PHONE_NUMBER is the phone number, in E.164 format, that you want messages in\n" +
+				"  reminders to be sent to.\n" +
+				"\n" +
+				"Options:\n"
+		fmt.Fprintf(flag.CommandLine.Output(), usage_header, os.Args[0])
 		flag.PrintDefaults()
 	}
-	config_path := flag.String("c", "/etc/reminder-boi.json", "The path to the config file")
+	reminders_path := flag.String("c", "/etc/text-me-when.json", "The path to the reminders config")
+	send_test := flag.Bool("t", false, "Send a test SMS to the configured phone number before entering main loop")
 	flag.Parse()
 
-	// construct sns client
-	home_dir, ok := os.LookupEnv("HOME")
-	if !ok {
-		log.Print("HOME environment variable is not present. Exiting...")
+	// parse phone number
+	if flag.NArg() != 1 {
+		flag.Usage()
 		os.Exit(1)
 	}
-	creds_path := filepath.Join(home_dir, ".aws/credentials")
-	creds := credentials.NewSharedCredentials(creds_path, "default")
-	cfg := aws.NewConfig().WithCredentials(creds).WithRegion("ca-central-1")
+	phone_number := flag.Args()[0]
+	match, err := regexp.MatchString(`^\+[0-9]{11,15}$`, phone_number)
+	if err != nil {
+		fmt.Printf("There was a problem while validating phone number: %s\n", err)
+		os.Exit(1)
+	}
+	if !match {
+		fmt.Printf("%s is not a valid phone number. It must consist of a + followed by up to 15 digits.\n")
+		os.Exit(1)
+	}
+
+	// read environment variables
+	region_key := "AWS_DEFAULT_REGION"
+	region, ok := os.LookupEnv(region_key)
+	if !ok {
+		fmt.Printf("Could not find required env var %s.\n", region_key)
+		os.Exit(1)
+	}
+
+	// construct sns client
+	creds := credentials.NewEnvCredentials()
+	cfg := aws.NewConfig().WithCredentials(creds).WithRegion(region)
 	session := session.Must(session.NewSession(cfg))
 	sns_client := sns.New(session)
 
 	// parse config file
-	raw_file, err := ioutil.ReadFile(*config_path)
+	raw_file, err := ioutil.ReadFile(*reminders_path)
 	if err != nil {
-		log.Printf("Failed to read config file: %s", err)
+		fmt.Printf("Failed to read config file: %s\n", err)
 		os.Exit(1)
 	}
 	reminder_list := make([]reminder.ReminderV1, 0)
 	err = json.Unmarshal(raw_file, &reminder_list)
 	if err != nil {
-		log.Printf("Failed to parse config file: %s", err)
+		fmt.Printf("Failed to parse config file: %s\n", err)
 		os.Exit(1)
+	}
+
+	// send test message if configured
+	if *send_test {
+		msg := "text-me-when: this is a test message. If you got this, " +
+			"you can be sure that message sending is working."
+		err := send_message(sns_client, msg, phone_number)
+		if err != nil {
+			fmt.Printf("There was a problem with sending test message: %s\n", err)
+			os.Exit(1)
+		}
+		log.Printf("sent test message to %s", phone_number)
 	}
 
 	// main loop
 	var wait_time time.Duration = 60
+	log.Print("entering main loop")
 	ticker := time.NewTicker(wait_time * time.Second)
 	for {
 		received_time := <-ticker.C
 		log.Print("checking reminders")
-		fire_reminders(received_time, sns_client, reminder_list)
+		fire_reminders(received_time, phone_number, sns_client, reminder_list)
 	}
 }

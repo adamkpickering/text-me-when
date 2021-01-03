@@ -53,14 +53,17 @@ func main() {
 
 	// parse CLI flags
 	flag.Usage = func() {
-		usage_header :=
-			"%s [OPTIONS] PHONE_NUMBER\n" +
-				"\n" +
-				"  Checks every minute for reminders from the reminders config file that should run.\n" +
-				"  PHONE_NUMBER is the phone number, in E.164 format, that you want messages in\n" +
-				"  reminders to be sent to.\n" +
-				"\n" +
-				"Options:\n"
+		usage_header := "%s [OPTIONS] PHONE_NUMBER\n" +
+			"\n" +
+			"  Checks once a minute for reminders whose messages should be sent out.\n" +
+			"  PHONE_NUMBER is the phone number, in E.164 format, that you want the messages\n" +
+			"  to be sent to.\n" +
+			"\n" +
+			"  The environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and\n" +
+			"  AWS_DEFAULT_REGION are required to send text messages via AWS SNS. For more\n" +
+			"  information on what these mean please see the AWS documentation.\n" +
+			"\n" +
+			"Options:\n"
 		fmt.Fprintf(flag.CommandLine.Output(), usage_header, os.Args[0])
 		flag.PrintDefaults()
 	}

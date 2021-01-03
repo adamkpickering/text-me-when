@@ -67,27 +67,37 @@ func (ct *CronTrigger) UnmarshalJSON(data []byte) error {
 	obj := map[string]string{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
-		return fmt.Errorf("CronTrigger.UnmarshalJSON: %w", err)
+		return fmt.Errorf("problem unmarshalling json: %w", err)
 	}
 	if &obj == nil {
-		return fmt.Errorf("CronTrigger.UnmarshalJSON: got null literal")
+		return fmt.Errorf("got null literal")
 	}
 	for key, value := range obj {
 		switch key {
 		case "trigger_type":
 			ct.triggerType = value
 		case "minute":
+			_, err := parseCronField(value, bounds["minute"]["lower"], bounds["minute"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.Minute = value
 		case "hour":
+			_, err := parseCronField(value, bounds["hour"]["lower"], bounds["hour"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.Hour = value
 		case "day_of_month":
+			_, err := parseCronField(value, bounds["day_of_month"]["lower"], bounds["day_of_month"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.DayOfMonth = value
 		case "month":
+			_, err := parseCronField(value, bounds["month"]["lower"], bounds["month"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.Month = value
 		case "day_of_week":
+			_, err := parseCronField(value, bounds["day_of_week"]["lower"], bounds["day_of_week"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.DayOfWeek = value
 		default:
-			return fmt.Errorf("CronTrigger.UnmarshalJSON: key %s is invalid", key)
+			return fmt.Errorf("the key \"%s\" is not a valid key", key)
 		}
 	}
 	return nil
@@ -101,22 +111,41 @@ func (ct *CronTrigger) ParseTriggerFromInterfaceMap(obj_map map[string]interface
 		}
 		switch key {
 		case "trigger_type":
+			if value != "cron" {
+				return fmt.Errorf("trigger type \"value\" is not valid (must be \"cron\")")
+			}
 			ct.triggerType = value
 		case "minute":
+			_, err := parseCronField(value, bounds["minute"]["lower"], bounds["minute"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.Minute = value
 		case "hour":
+			_, err := parseCronField(value, bounds["hour"]["lower"], bounds["hour"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.Hour = value
 		case "day_of_month":
+			_, err := parseCronField(value, bounds["day_of_month"]["lower"], bounds["day_of_month"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.DayOfMonth = value
 		case "month":
+			_, err := parseCronField(value, bounds["month"]["lower"], bounds["month"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.Month = value
 		case "day_of_week":
+			_, err := parseCronField(value, bounds["day_of_week"]["lower"], bounds["day_of_week"]["upper"])
+			if err != nil { return generateError(key, value) }
 			ct.DayOfWeek = value
 		default:
 			return fmt.Errorf("the key \"%s\" is not a valid key", key)
 		}
 	}
 	return nil
+}
+
+// This is a convenience function to cut down boilerplate in error handling in
+// *CronTrigger.UnmarshalJSON and *CronTrigger.ParseTriggerFromInterfaceMap.
+func generateError(key, value string) error {
+	return fmt.Errorf("pattern \"%s\" is invalid for key \"%s\"", value, key)
 }
 
 // Checks whether a cron field with a given value matches a field pattern, as stored by

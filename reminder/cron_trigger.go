@@ -37,11 +37,12 @@ var bounds = map[string]map[string]uint{
 }
 
 // CronTrigger is a type of Trigger that mimics the behaviour of cron.
-// For the uninitiated, each field corresponds to a level of timekeeping:
+// For the uninitiated, each field corresponds to a granularity of time:
 // minutes, hours, days of the month, months, and days of the week.
-// Positive matches for each field are ANDed, with the exception of the
-// DayOfMonth and DayOfWeek fields, which are ORed. Each field may use one
-// of three formats:
+// The program tries to match each field to the current time, and if any
+// field does not match, no action is taken. The exception is the
+// DayOfMonth and DayOfWeek fields - if one of them matches then the other
+// is ignored. Each field may use one of three formats:
 //
 // "*": the field matches every value
 //

@@ -11,7 +11,7 @@ To build `text-me-when`, you need [the Go compiler](https://golang.org/doc/insta
 Once you have that, clone this repository and do:
 
 ```
-go build -o text-me-when main.go
+go build text-me-when.go
 ```
 
 You can then copy `text-me-when` to an appropriate location.

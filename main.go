@@ -100,6 +100,7 @@ func main() {
 	cfg := aws.NewConfig().WithCredentials(creds).WithRegion(region)
 	session := session.Must(session.NewSession(cfg))
 	sns_client := sns.New(session)
+	log.Print("constructed AWS SNS client")
 
 	// parse config file
 	raw_file, err := ioutil.ReadFile(*reminders_path)
@@ -113,6 +114,7 @@ func main() {
 		fmt.Printf("Failed to parse config file: %s\n", err)
 		os.Exit(1)
 	}
+	log.Printf("read in %d reminders from reminder config", len(reminder_list))
 
 	// send test message if configured
 	if *send_test {

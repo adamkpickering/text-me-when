@@ -84,13 +84,11 @@ func (ct *CronTrigger) ShouldRun(current_time time.Time) bool {
 
 // Parses a []byte containing JSON into a CronTrigger.
 func (ct *CronTrigger) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" { return nil }
 	obj := map[string]string{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
 		return fmt.Errorf("problem unmarshalling json: %w", err)
-	}
-	if &obj == nil {
-		return fmt.Errorf("got null literal")
 	}
 	return ct.mapToCronTrigger(obj)
 }

@@ -44,9 +44,6 @@ func (r *ReminderV1) UnmarshalJSON(data []byte) error {
 		fmt.Println(obj)
 		return fmt.Errorf("inital unmarshal failed: %w", err)
 	}
-	if &obj == nil {
-		return fmt.Errorf("got null literal")
-	}
 	for key, i := range obj {
 		switch key {
 		case "version":

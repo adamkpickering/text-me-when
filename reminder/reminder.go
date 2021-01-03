@@ -60,8 +60,10 @@ func (r *ReminderV1) UnmarshalJSON(data []byte) error {
 		case "version":
 			value, ok := i.(string)
 			if ! ok {
-				msg := "failed to parse value of key \"version\" into string"
-				return fmt.Errorf(msg)
+				return fmt.Errorf("failed to parse value of key \"version\" into string")
+			}
+			if value != "v1" {
+				return fmt.Errorf("expected value \"v1\" but got value \"%s\"", value)
 			}
 			r.Version = value
 

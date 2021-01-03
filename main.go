@@ -55,7 +55,7 @@ func main() {
 
 	// parse CLI flags
 	flag.Usage = func() {
-		usage_header := "%s [OPTIONS] PHONE_NUMBER\n" +
+		usage_header := "Usage: %s [OPTIONS] PHONE_NUMBER\n" +
 			"\n" +
 			"  Checks once a minute for reminders whose messages should be sent out.\n" +
 			"  PHONE_NUMBER is the phone number, in E.164 format, that you want the messages\n" +

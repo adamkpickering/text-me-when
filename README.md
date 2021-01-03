@@ -1,9 +1,8 @@
 # text-me-when
 
-`text-me-when` is a way to remember events, especially periodic events like birthdays.
-You configure reminders in a JSON file using a `cron`-like format, and then it uses
-AWS SNS to send you texts reminding you of the events. This makes it independent
-of any phone or email/calendar ecosystems, and thus protects your privacy.
+`text-me-when` sends you SMS reminder messages at times you specify in a `cron`-like
+format. It uses AWS SNS to send SMS messages. It is independent of of any phone, email
+or calendar ecosystems, and thus protects your privacy.
 
 
 ## Building and Installation
@@ -50,11 +49,11 @@ The following is an example config:
   },
   {
     "version": "v1",
-    "message": "This message is printed on the sixth minute of every hour on the third day of every month.",
+    "message": "This message is printed every other minute on the third day of every month.",
     "triggers": [
       {
         "trigger_type": "cron",
-        "minute": "6",
+        "minute": "*/2",
         "hour": "*",
         "day_of_month": "3",
         "month": "*",

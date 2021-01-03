@@ -18,10 +18,11 @@ import (
 	"github.com/adamkpickering/reminder-boi/reminder"
 )
 
-func send_message(sns_client *sns.SNS, message string, number string) error {
+// Sends an SMS message to a phone number via AWS SNS. The phone number must be in E.164 format.
+func send_message(sns_client *sns.SNS, message string, phone_number string) error {
 	pi := &sns.PublishInput{
 		Message:     &message,
-		PhoneNumber: &number,
+		PhoneNumber: &phone_number,
 	}
 	if err := pi.Validate(); err != nil {
 		return fmt.Errorf("pi.Validate: %w", err)
@@ -33,10 +34,11 @@ func send_message(sns_client *sns.SNS, message string, number string) error {
 	return nil
 }
 
-func fire_reminders(call_time time.Time, phone_number string, sns_client *sns.SNS,
+// Iterates through reminders and fires the ones that should be fired at the eval_time.
+func fire_reminders(eval_time time.Time, phone_number string, sns_client *sns.SNS,
 	reminder_list []reminder.ReminderV1) {
 	for _, reminder := range reminder_list {
-		if reminder.ShouldRun(call_time) {
+		if reminder.ShouldRun(eval_time) {
 			err := send_message(sns_client, reminder.Message, phone_number)
 			if err != nil {
 				log.Printf("send_message failed: %s", err)

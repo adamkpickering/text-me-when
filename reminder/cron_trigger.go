@@ -10,6 +10,9 @@ import (
 	"encoding/json"
 )
 
+// bounds gives the minimum and maximum acceptable values for each cron field.
+// These bounds are inclusive. For example, both 0 and 59 are acceptable values
+// for the "minute" field.
 var bounds = map[string]map[string]uint{
 	"minute": map[string]uint{
 		"lower": 0,
@@ -33,6 +36,21 @@ var bounds = map[string]map[string]uint{
 	},
 }
 
+// CronTrigger is a type of Trigger that mimics the behaviour of cron.
+// For the uninitiated, each field corresponds to a level of timekeeping:
+// minutes, hours, days of the month, months, and days of the week.
+// Positive matches for each field are ANDed, with the exception of the
+// DayOfMonth and DayOfWeek fields, which are ORed. Each field may use one
+// of three formats:
+//
+// "*": the field matches every value
+//
+// "*/x": the field matches numbers starting at the low bound of the field
+// and counting up by increments of x. So if the low bound is 0 and x = 4,
+// the field will match on values 0, 4, 8, 12, 16, and so on.
+//
+// "x,y,z": the field matches on exactly x, y and z. You may include any number
+// of values.
 type CronTrigger struct {
 	triggerType string
 	Minute      string
@@ -42,6 +60,7 @@ type CronTrigger struct {
 	DayOfWeek   string
 }
 
+// Returns the type of the Trigger.
 func (ct *CronTrigger) TriggerType() string {
 	return ct.triggerType
 }
@@ -63,6 +82,7 @@ func (ct *CronTrigger) ShouldRun(current_time time.Time) bool {
 	return minute && hour && month && (day_of_month || day_of_week)
 }
 
+// Parses a []byte containing JSON into a CronTrigger.
 func (ct *CronTrigger) UnmarshalJSON(data []byte) error {
 	obj := map[string]string{}
 	err := json.Unmarshal(data, &obj)
@@ -72,43 +92,27 @@ func (ct *CronTrigger) UnmarshalJSON(data []byte) error {
 	if &obj == nil {
 		return fmt.Errorf("got null literal")
 	}
-	for key, value := range obj {
-		switch key {
-		case "trigger_type":
-			ct.triggerType = value
-		case "minute":
-			_, err := parseCronField(value, bounds["minute"]["lower"], bounds["minute"]["upper"])
-			if err != nil { return generateError(key, value) }
-			ct.Minute = value
-		case "hour":
-			_, err := parseCronField(value, bounds["hour"]["lower"], bounds["hour"]["upper"])
-			if err != nil { return generateError(key, value) }
-			ct.Hour = value
-		case "day_of_month":
-			_, err := parseCronField(value, bounds["day_of_month"]["lower"], bounds["day_of_month"]["upper"])
-			if err != nil { return generateError(key, value) }
-			ct.DayOfMonth = value
-		case "month":
-			_, err := parseCronField(value, bounds["month"]["lower"], bounds["month"]["upper"])
-			if err != nil { return generateError(key, value) }
-			ct.Month = value
-		case "day_of_week":
-			_, err := parseCronField(value, bounds["day_of_week"]["lower"], bounds["day_of_week"]["upper"])
-			if err != nil { return generateError(key, value) }
-			ct.DayOfWeek = value
-		default:
-			return fmt.Errorf("the key \"%s\" is not a valid key", key)
-		}
-	}
-	return nil
+	return ct.mapToCronTrigger(obj)
 }
 
-func (ct *CronTrigger) ParseTriggerFromInterfaceMap(obj_map map[string]interface{}) error {
-	for key, i := range obj_map {
+// Parses a map[string]interface{} into a CronTrigger. This is used when unmarshalling
+// (from JSON) structs that include a CronTrigger under a field.
+func (ct *CronTrigger) ParseTriggerFromInterfaceMap(raw_obj_map map[string]interface{}) error {
+	obj_map := map[string]string{}
+	for key, i := range raw_obj_map {
 		value, ok := i.(string)
 		if ! ok {
-			return fmt.Errorf("the value of key %s could not be converted to string")
+			return fmt.Errorf("the value of key \"%s\" could not be converted to string", key)
 		}
+		obj_map[key] = value
+	}
+	return ct.mapToCronTrigger(obj_map)
+}
+
+// Takes a map[string]string and parses its keys and values into their appropriate
+// locations in a CronTrigger struct.
+func (ct *CronTrigger) mapToCronTrigger(obj map[string]string) error {
+	for key, value := range obj {
 		switch key {
 		case "trigger_type":
 			if value != "cron" {
@@ -143,7 +147,7 @@ func (ct *CronTrigger) ParseTriggerFromInterfaceMap(obj_map map[string]interface
 }
 
 // This is a convenience function to cut down boilerplate in error handling in
-// *CronTrigger.UnmarshalJSON and *CronTrigger.ParseTriggerFromInterfaceMap.
+// *CronTrigger.mapToCronTrigger.
 func generateError(key, value string) error {
 	return fmt.Errorf("pattern \"%s\" is invalid for key \"%s\"", value, key)
 }

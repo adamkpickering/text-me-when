@@ -41,8 +41,9 @@ var bounds = map[string]map[string]uint{
 // minutes, hours, days of the month, months, and days of the week.
 // The program tries to match each field to the current time, and if any
 // field does not match, no action is taken. The exception is the
-// DayOfMonth and DayOfWeek fields - if one of them matches then the other
-// is ignored. Each field may use one of three formats:
+// DayOfMonth and DayOfWeek fields - if both are restricted (not "*"), then
+// one or both must match the current day. Each field may use one of three
+// formats:
 //
 // "*": the field matches every value
 //
@@ -80,7 +81,10 @@ func (ct *CronTrigger) ShouldRun(current_time time.Time) bool {
 	day_of_week := matchCronFields(uint(current_time.Weekday()), ct.DayOfWeek,
 		bounds["day_of_week"]["lower"], bounds["day_of_week"]["upper"])
 
-	return minute && hour && month && (day_of_month || day_of_week)
+	if ct.DayOfMonth != "*" && ct.DayOfWeek != "*" {
+		return minute && hour && month && (day_of_month || day_of_week)
+	}
+	return minute && hour && month && day_of_month && day_of_week
 }
 
 // Parses a []byte containing JSON into a CronTrigger.

@@ -3,6 +3,7 @@ package reminder
 import (
 	"testing"
 	"time"
+	"fmt"
 )
 
 // Tests conditions that should result in successful CronTrigger creation.
@@ -185,7 +186,6 @@ func TestShouldRun(t *testing.T) {
 	// slash separated 3
 	ct = getCronTrigger(t, "*/4", "*", "*", "*", "*")
 	test_time = time.Date(2021, time.January, 1, 0, 6, 22, 1234, time.UTC)
-	t.Log(test_time)
 	if ct.ShouldRun(test_time) {
 		t.Error("CronTrigger.ShouldRun returned true when it should be false")
 	}
@@ -193,7 +193,6 @@ func TestShouldRun(t *testing.T) {
 	// comma separated 1
 	ct = getCronTrigger(t, "*", "0,12,23", "*", "*", "*")
 	test_time = time.Date(2021, time.January, 1, 0, 0, 22, 1234, time.UTC)
-	t.Log(test_time)
 	if ! ct.ShouldRun(test_time) {
 		t.Error("CronTrigger.ShouldRun returned false when it should be true")
 	}
@@ -201,7 +200,6 @@ func TestShouldRun(t *testing.T) {
 	// comma separated 2
 	ct = getCronTrigger(t, "*", "0,12,23", "*", "*", "*")
 	test_time = time.Date(2021, time.January, 1, 12, 0, 22, 1234, time.UTC)
-	t.Log(test_time)
 	if ! ct.ShouldRun(test_time) {
 		t.Error("CronTrigger.ShouldRun returned false when it should be true")
 	}
@@ -209,8 +207,79 @@ func TestShouldRun(t *testing.T) {
 	// comma separated 3
 	ct = getCronTrigger(t, "*", "0,12,23", "*", "*", "*")
 	test_time = time.Date(2021, time.January, 1, 17, 0, 22, 1234, time.UTC)
-	t.Log(test_time)
 	if ct.ShouldRun(test_time) {
 		t.Error("CronTrigger.ShouldRun returned true when it should be false")
+	}
+}
+
+func TestShouldRunNotDOWNotDOM(t *testing.T) {
+	// test setting neither day of month but not day of week
+	ct := getCronTrigger(t, "0", "7", "*", "2", "*")
+	for i := 1; i < 29; i++ {
+		test_time := time.Date(2021, time.February, i, 7, 0, 22, 1234, time.UTC)
+		if ! ct.ShouldRun(test_time) {
+			t.Errorf("CronTrigger.ShouldRun returned false when it should be true; day: %d", test_time.Day())
+		}
+	}
+}
+
+func TestShouldRunNotDOWDOM(t *testing.T) {
+	// test setting day of month but not day of week
+	day := 4
+	day_string := fmt.Sprintf("%d", day)
+	ct := getCronTrigger(t, "0", "7", day_string, "2", "*")
+	for i := 1; i < 29; i++ {
+		test_time := time.Date(2021, time.February, i, 7, 0, 22, 1234, time.UTC)
+		if test_time.Day() == day {
+			if ! ct.ShouldRun(test_time) {
+				t.Errorf("CronTrigger.ShouldRun returned false when it should be true; day: %d", test_time.Day())
+			}
+		} else {
+			if ct.ShouldRun(test_time) {
+				t.Errorf("CronTrigger.ShouldRun returned true when it should be false; day: %d", test_time.Day())
+			}
+		}
+	}
+}
+
+func TestShouldRunDOWNotDOM(t *testing.T) {
+	// test setting day of week but not day of month
+	weekday := time.Thursday
+	weekday_string := fmt.Sprintf("%d", weekday)
+	ct := getCronTrigger(t, "0", "7", "*", "2", weekday_string)
+	for i := 1; i < 29; i++ {
+		test_time := time.Date(2021, time.February, i, 7, 0, 22, 1234, time.UTC)
+		if test_time.Weekday() == weekday {
+			if ! ct.ShouldRun(test_time) {
+				t.Errorf("CronTrigger.ShouldRun returned false when it should be true; weekday: %d", test_time.Day())
+			}
+		} else {
+			if ct.ShouldRun(test_time) {
+				t.Errorf("CronTrigger.ShouldRun returned true when it should be false; weekday: %d", test_time.Weekday())
+			}
+		}
+	}
+}
+
+func TestShouldRunDOWAndDOM(t *testing.T) {
+	// test setting day of week and day of month
+	day := 3
+	day_string := fmt.Sprintf("%d", day)
+	weekday := time.Thursday
+	weekday_string := fmt.Sprintf("%d", weekday)
+	ct := getCronTrigger(t, "0", "7", day_string, "2", weekday_string)
+	for i := 1; i < 29; i++ {
+		test_time := time.Date(2021, time.February, i, 7, 0, 22, 1234, time.UTC)
+		if test_time.Weekday() == weekday || test_time.Day() == day {
+			if ! ct.ShouldRun(test_time) {
+				detail := fmt.Sprintf("weekday: %d; day: %d", test_time.Weekday(), test_time.Day())
+				t.Errorf("CronTrigger.ShouldRun returned false when it should be true; %s", detail)
+			}
+		} else {
+			if ct.ShouldRun(test_time) {
+				detail := fmt.Sprintf("weekday: %d; day: %d", test_time.Weekday(), test_time.Day())
+				t.Errorf("CronTrigger.ShouldRun returned true when it should be false; %s", detail)
+			}
+		}
 	}
 }
